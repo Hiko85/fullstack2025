@@ -1,10 +1,23 @@
 openapi: "3.1.0"
 info:
-  title: Kerékpárbolt API
+  title: Fogkrémek API
+  description: |
+    A **fogkrémek** megjelenítésekor vegye figyelembe, hogy
+      
+    - A `weight` tartalmazza a  mértékegységet is
+    - Az `is_vegan` csak `true` vagy `false` értéket adhat vissza
+    - A `brand_id` helyett a márka adatait jelenítse meg a minta szerint
+    - Az ár dollárban értendő
+
+    A **márka** megjelenítésekor vegye figyelembe, hogy
+
+    - az `id`, `name`, `website` és `country_of_origin` értékeit jelenítse meg, 
+    - továbbá jelenítse meg az összes hozzá tartozó terméket
+
   version: 1.0.0
 
 servers:
-  - url: http://backend.vm1.test
+  - url: http://backend.vm1.test:8080
     description: VM1 backend
   - url: http://backend.vm2.test
     description: VM2 backend
@@ -18,30 +31,17 @@ servers:
     description: VM6 backend
 
 paths:
-  /api/bicycles:
+  /api/toothpastes:
     get:
       tags:
-        - Bicycles
-      summary: Kerékpárok listájának lekérése
+       - Toothpastes
+      summary: Fogkrémek listájának lekérése
       description: |
-        Az `index` visszaadja a kerékpárok adatait a minta szerint.
-      operationId: bicycles.index
-      parameters:
-        - name: sex
-          in: query
-          schema:
-            type: string
-            enum: [férfi, női, unisex]
-
-        - name: type
-          in: query
-          schema:
-            type: string
-            enum: [MTB, városi, országúti, cross]
-
+        Visszaadja az összes fogkrém adatát a minta szerint
+      operationId: toothpastes.index
       responses:
         '200':
-          description: Kerékpárok listája
+          description: Fogkrémek listája
           content:
             application/json:
               schema:
@@ -50,161 +50,132 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/BicycleResource'
-              example: {"data":[{"id":1,"name":"MTB kerékpár ST 530 S, 27,5”, fekete, piros","wheel_size":27,"gears":9,"sex":"férfi","type":"MTB","size":"S","color":"fekete, piros"},{"id":2,"name":"MTB kerékpár ST 530 S, 27,5”, fekete, piros","wheel_size":27,"gears":9,"sex":"férfi","type":"MTB","size":"M","color":"fekete, piros"},{"id":3,"name":"MTB kerékpár ST 530 S, 27,5”, fekete, piros","wheel_size":27,"gears":9,"sex":"férfi","type":"MTB","size":"L","color":"fekete, piros"}]}
+                      $ref: '#/components/schemas/ToothpasteResource'
+              example: {"data":[{"id":1,"name":"Crest 3D White","weight":"116 g","is_vegan":false,"stock_quantity":50,"price":4.99,"brand":{"id":1,"name":"Crest","website":"https://www.crest.com","country_of_origin":"USA"}},{"id":2,"name":"Crest Pro-Health","weight":"170 g","is_vegan":false,"stock_quantity":30,"price":5.49,"brand":{"id":1,"name":"Crest","website":"https://www.crest.com","country_of_origin":"USA"}}]}
     post:
       tags:
-        - Bicycles
-      summary: Új kerékpár létrehozása
+       - Toothpastes
+      summary: Új fogkrém létrehozása
       description: |
-        A `store` feladata, hogy a JSON-ként kapott adatokat validálja, majd eltárolja az adatbázisban.
-        A létrehozott új rekordot adja is vissza a minta szerint.
-
-      operationId: bicycles.store
+        Hozzon létre egy új fogkrém rekordot a kapott JSON alapján.
+        Sikeres mentés után adja vissza a létrehozott rekordot a minta szerint.
+      operationId: toothpastes.store
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BicycleRequest'
-            example: {"name":"MTB kerékpár ST 530 S, 27,5”, ezüst, kék","wheel_size":27,"gears":21,"sex":"férfi","type":"MTB","size":"L","color":"ezüst, kék","manufacturer_id":1}
+              $ref: '#/components/schemas/ToothpasteRequest'
+            example: {"brand_id": 1, "name":"Crest Pro-Health","weight":90,"unit":"g","is_vegan":false,"stock_quantity":24,"price":3.49}
       responses:
         '201':
-          description: Kerékpár létrehozva
+          description: Fogkrém létrehozva
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/BicycleResource'
-              example: {"data":{"id":999,"name":"MTB kerékpár ST 530 S, 27,5”, ezüst, kék","wheel_size":27,"gears":21,"sex":"férfi","type":"MTB","size":"L","color":"ezüst, kék"}}
+                    $ref: '#/components/schemas/ToothpasteResource'
+              example: {"data":{"id":12,"name":"Crest Pro-Health","weight":"90 g","is_vegan":false,"stock_quantity":24,"price":3.49,"brand":{"id":1,"name":"Crest","website":"https://www.crest.com","country_of_origin":"USA"}}}
         '422':
-          description: Érvénytelen adatok
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                  errors:
-                    type: object
-              example: {"message":"The given data was invalid.","errors":{"name":["The name field is required."]}}
-
-
-  /api/bicycles/{bicycle}:
+          description: Hibás adatok
+        '500':
+          description: Szerver hiba
+  /api/toothpastes/{toothpaste}:
     get:
       tags:
-        - Bicycles
-      summary: Egy adott kerékpár lekérése
+       - Toothpastes
+      summary: Egy adott fogkrém lekérése
       description: |
-        A `show` a kerékpár azonosítója alapján keresse meg a megfelelő rekordot, és adja vissza az adatokat a minta szerint.
-      operationId: bicycles.show
+        A fogkrém azonosítója alapján keresse meg a megfelelő rekordot, és adja vissza az adatokat a minta szerint
+      operationId: toothpastes.show
       parameters:
-        - name: bicycle
+        - name: toothpaste
           in: path
           required: true
           schema:
             type: integer
-            example: 4
+          example: 4
       responses:
         '200':
-          description: Egy adott kerékpár
+          description: Egy adott fogkrém
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/BicycleResource'
-              example: {"data":{"id":4,"name":"MTB kerékpár ST 530 S, 27,5”, fekete, piros","wheel_size":27,"gears":9,"sex":"férfi","type":"MTB","size":"XL","color":"fekete, piros"}}
-        '404':
-          description: Nem található a keresett elem
+                    $ref: '#/components/schemas/ToothpasteResource'
+              example:  {"data":{"id":4,"name":"Colgate Optic White","weight":"85 g","is_vegan":true,"stock_quantity":60,"price":4.49,"brand":{"id":2,"name":"Colgate","website":"https:\/\/www.colgate.com","country_of_origin":"USA"}}}
     put:
       tags:
-        - Bicycles
-      summary: Egy adott kerékpár frissítése
+       - Toothpastes
+      summary: Egy adott fogkrém frissítése
       description: |
-        Az `update` feladata, hogy a JSON-ként kapott adatokat validálja,
-        majd teljes egészében cserélje le az adatbázisban található adatokat.
 
+        A feladata, hogy a JSON-ként kapott adatokat validálja,
+        majd tejes egészében cserélje le az adatbázisban található adatokat.
+        
         A módosított rekordot adja is vissza a minta szerint!
-
-
-      operationId: bicycles.update
+      operationId: toothpastes.update
       parameters:
-        - name: bicycle
+        - name: toothpaste
           in: path
           required: true
           schema:
             type: integer
-            example: 11
+          example: 3
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BicycleRequest'
-            example: {"name":"MTB kerékpár ST 530 S, 26”, ezüst","wheel_size":26,"gears":18,"sex":"férfi","type":"MTB","size":"XXL","color":"ezüst","manufacturer_id":4}
+              $ref: '#/components/schemas/ToothpasteRequest'
+            example: {"brand_id":1,"name":"Crest Pro-Health","weight":170,"unit":"g","is_vegan":false,"stock_quantity":30,"price":5.49}
       responses:
         '200':
-          description: Kerékpár frissítve
+          description: Fogkrém frissítve
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/BicycleResource'
-              example: {"data":{"id":11,"name":"MTB kerékpár ST 530 S, 26”, ezüst","wheel_size":26,"gears":18,"sex":"férfi","type":"MTB","size":"XXL","color":"ezüst"}}
-        '422':
-          description: Érvénytelen adatok
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                  errors:
-                    type: object
-              example: {"message":"The given data was invalid.","errors":{"gears":["The gears must be between 1 and 30."]}}
-        '404':
-          description: Nem található a keresett elem
+                    $ref: '#/components/schemas/ToothpasteResource'
+              example:  {"data":{"id":3,"name":"Crest Pro-Health","weight":"170 g","is_vegan":false,"stock_quantity":30,"price":5.49,"brand":{"id":1,"name":"Crest","website":"https://www.crest.com","country_of_origin":"USA"}}}
     delete:
       tags:
-        - Bicycles
-      summary: Egy adott kerékpár törlése
+       - Toothpastes
+      summary: Egy adott fogkrém törlése
       description: |
-        A `destroy` törölje ki a megfelelő rekordot az adatbázisból az `id` alapján.
-      operationId: bicycles.destroy
+        Törölje ki a megfelelő rekordot az adatbázisból a kapott azonosító alapján.
+      operationId: toothpastes.destroy
       parameters:
-        - name: bicycle
+        - name: toothpaste
           in: path
           required: true
           schema:
             type: integer
-            example: 8
+          example: 2
       responses:
         '204':
-          description: Kerékpár törölve
+          description: Elem törölve
         '404':
           description: Nem található a keresett elem
         '500':
           description: Szerver hiba
-
-  /api/manufacturers:
+  /api/brands:
     get:
       tags:
-        - Manufacturers
-      summary: Gyártók listájának lekérése
+       - Brands
+      summary: Márkák listájának lekérése
       description: |
-        Az `index` visszaadja a gyártók adatait a minta szerint.
-      operationId: manufacturers.index
+        Visszaadja az összes márka adatát a minta szerint
+      operationId: brands.index
       responses:
         '200':
-          description: Gyártók listája
+          description: Márkák listája
           content:
             application/json:
               schema:
@@ -213,265 +184,192 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ManufacturerResource'
-              example: {"data":[{"id":1,"name":"Rockrider","website":"https://www.decathlon.hu/"},{"id":2,"name":"Elops","website":null},{"id":3,"name":"Triban","website":"https://www.decathlon.hu/"}]}
+                      $ref: '#/components/schemas/BrandResource'
+              example: {"data":[{"id":1,"name":"Crest","website":"https://www.crest.com","country_of_origin":"USA","toothpastes":[{"id":1,"name":"Crest 3D White","weight":"116 g","is_vegan":false,"stock_quantity":50,"price":4.99},{"id":2,"name":"Crest Pro-Health","weight":"170 g","is_vegan":false,"stock_quantity":30,"price":5.49},{"id":3,"name":"Crest Pro-Health","weight":"170 g","is_vegan":false,"stock_quantity":30,"price":5.49}]},{"id":2,"name":"Colgate","website":"https://www.colgate.com","country_of_origin":"USA","toothpastes":[{"id":4,"name":"Colgate Optic White","weight":"85 g","is_vegan":true,"stock_quantity":60,"price":4.49}]}]}
     post:
       tags:
-        - Manufacturers
-      summary: Új gyártó létrehozása
+       - Brands
+      summary: Új márka létrehozása
       description: |
-        A `store` feladata, hogy a JSON-ként kapott adatokat validálja, majd eltárolja az adatbázisban.
-      operationId: manufacturers.store
+        Hozzon létre egy új márka rekordot a kapott JSON alapján.
+        Sikeres mentés után adja vissza a létrehozott rekordot a minta szerint.
+      operationId: brands.store
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ManufacturerRequest'
-            example: {"name":"Merida","website":"https://www.merida-bikes.com/en-gb"}
+              $ref: '#/components/schemas/BrandRequest'
+            example: {"name":"Signal","website":"https://www.signaltoothpaste.com","country_of_origin":"France"}
       responses:
         '201':
-          description: Gyártó létrehozva
+          description: Márka létrehozva
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/ManufacturerResource'
-              example: {"data":{"id":9999,"name":"Merida","website":"https://www.merida-bikes.com/en-gb"}}
+                    $ref: '#/components/schemas/BrandResource'
+              example: {"data":{"id":6,"name":"Signal","website":"https://www.signaltoothpaste.com","country_of_origin":"France","toothpastes":[]}}
         '422':
-          description: Érvénytelen adatok
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                  errors:
-                    type: object
-              example: {"message":"The given data was invalid.","errors":{"name":["The name field is required."]}}
+          description: Hibás adatok
+        '500':
+          description: Szerver hiba
 
-  /api/manufacturers/{manufacturer}:
+  /api/brands/{brand}:
     get:
       tags:
-        - Manufacturers
-      summary: Egy adott gyártó lekérése
+       - Brands
+      summary: Egy adott márka lekérése
       description: |
-        A `show` a gyártó azonosítója alapján keresse meg a megfelelő rekordot,
-        és adja vissza az adatokat a minta szerint.
-      operationId: manufacturers.show
+        A márka azonosítója alapján keresse meg a megfelelő rekordot, és adja vissza az adatokat a minta szerint
+      operationId: brands.show
       parameters:
-        - name: manufacturer
+        - name: brand
           in: path
           required: true
           schema:
             type: integer
-            example: 4
+          example: 5
       responses:
         '200':
-          description: Egy adott gyártó
+          description: Egy adott márka
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/ManufacturerResource'
-              example: {"data":{"id":4,"name":"Kruz Bike Company","website":"https://kruzbike.com/"}}
-        '404':
-          description: Nem található a keresett elem
+                    $ref: '#/components/schemas/BrandResource'
+              example: {"data":{"id":5,"name":"Tom's of Maine","website":"https://www.tomsofmaine.com","country_of_origin":"USA","toothpastes":[{"id":9,"name":"Tom's of Maine Luminous White","weight":"113 g","is_vegan":false,"stock_quantity":45,"price":5.29},{"id":10,"name":"Tom's of Maine Simply White","weight":"119 g","is_vegan":false,"stock_quantity":50,"price":5.79}]}}
     put:
       tags:
-        - Manufacturers
-      summary: Egy adott gyártó frissítése
+       - Brands
+      summary: Egy adott márka frissítése
       description: |
-        Az `update` feladata, hogy a JSON-ként kapott adatokat validálja,
-        majd teljes egészében cserélje le az adatbázisban található adatokat.
-
+        A JSON-ként kapott adatokat validálja,
+        majd tejes egészében cserélje le az adatbázisban található adatokat.
         A módosított rekordot adja is vissza a minta szerint!
-
-      operationId: manufacturers.update
+      operationId: brands.update
       parameters:
-        - name: manufacturer
+        - name: brand
           in: path
           required: true
           schema:
             type: integer
-            example: 2
+          example: 2
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ManufacturerRequest'
-            example: {"name":"Elops","website":"https://www.decathlon.hu/"}
+              $ref: '#/components/schemas/BrandRequest'
+            example: {"name":"Colgate","website":"https://www.colgate.hu","country_of_origin":"USA"}
       responses:
         '200':
-          description: Gyártó frissítve
+          description: Márka frissítve
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/ManufacturerResource'
-              example: {"data":{"id":2,"name":"Elops","website":"https://www.decathlon.hu/"}}
-        '422':
-          description: Érvénytelen adatok
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                  errors:
-                    type: object
-              example: {"message":"The given data was invalid.","errors":{"name":["The name field is required."]}}
+                    $ref: '#/components/schemas/BrandResource'
+              example: {"data":{"id":2,"name":"Colgate","website":"https://www.colgate.hu","country_of_origin":"USA","toothpastes":[{"id":3,"name":"Colgate Total","weight":"200 g","is_vegan":true,"stock_quantity":40,"price":3.99},{"id":4,"name":"Colgate Optic White","weight":"85 g","is_vegan":true,"stock_quantity":60,"price":4.49}]}}
         '404':
           description: Nem található a keresett elem
+        '422':
+          description: Hibás adatok
+        '500':
+          description: Szerver hiba
+
+   
+
     delete:
       tags:
-        - Manufacturers
-      summary: Egy adott gyártó törlése
+       - Brands
+      summary: Egy adott márka törlése
       description: |
-        A `destroy` törölje ki a megfelelő rekordot az adatbázisból az `id` alapján.
-      operationId: manufacturers.destroy
+        Törölje ki a megfelelő rekordot az adatbázisból a kapott azonosító alapján.
+      operationId: brands.destroy
       parameters:
-        - name: manufacturer
+        - name: brand
           in: path
           required: true
           schema:
             type: integer
-            example: 3
+          example: 1
       responses:
         '204':
-          description: Gyártó törölve
+          description: Elem törölve
         '404':
           description: Nem található a keresett elem
         '500':
           description: Szerver hiba
+
 
 components:
   schemas:
-    ManufacturerResource:
+    BrandRequest:
       type: object
-      properties:
-        id:
-          type: integer
-          description: A gyártó azonosítója
-        name:
-          type: string
-          maxLength: 20
-          description: A gyártó neve
-        website:
-          type: string
-          maxLength: 255
-          nullable: true
-          description: Hivatkozás a gyártó weboldalára
-    ManufacturerRequest:
-      type: object
-      description: Gyártó létrehozásához vagy frissítéséhez szükséges adatok
       properties:
         name:
           type: string
-          maxLength: 20
-          description: A gyártó neve
-          example: Merida
         website:
           type: string
-          maxLength: 255
-          nullable: true
-          description: Hivatkozás a gyártó weboldalára (opcionális)
-          example: https://www.merida-bikes.com/en-gb
-      required:
-        - name
+        country_of_origin:
+          type: string
+      required: [name, website, country_of_origin]
 
-    BicycleResource:
+    ToothpasteRequest:
+      type: object
+      properties:
+        brand_id:
+          type: integer
+        name:
+          type: string
+        weight:
+          type: integer
+        unit:
+          type: string
+        is_vegan:
+          type: boolean
+        stock_quantity:
+          type: integer
+        price:
+          type: number
+      required: [brand_id, name, weight, unit, is_vegan, stock_quantity, price]
+    ToothpasteResource:
       type: object
       properties:
         id:
           type: integer
-          description: A kerékpár azonosítója
         name:
           type: string
-          maxLength: 80
-          description: A kerékpár neve
-        wheel_size:
-          type: number
-          format: float
-          description: A kerék mérete
-        gears:
+        weight:
+          type: string
+        is_vegan:
+          type: boolean
+        stock_quantity:
           type: integer
-          description: A váltó sebesség fokozatainak száma
-        sex:
-          type: string
-          maxLength: 10
-          description: Kiknek tervezték a kerékpárt, értéke férfi, női, vagy unisex lehet
-        type:
-          type: string
-          maxLength: 10
-          description: A kerékpár típusa, értéke MTB, városi, országúti, vagy cross lehet
-        size:
-          type: string
-          maxLength: 10
-          nullable: true
-          description: A kerékpár mérete (opcionális)
-        color:
-          type: string
-          maxLength: 20
-          nullable: true
-          description: A kerékpár színe (opcionális)
-    BicycleRequest:
+        price:
+          type: number
+        brand:
+          $ref: '#/components/schemas/BrandResource'
+
+    BrandResource:
       type: object
-      description: Kerékpár létrehozásához vagy frissítéséhez szükséges adatok
       properties:
+        id:
+          type: integer
         name:
           type: string
-          maxLength: 80
-          description: A kerékpár neve
-          example: MTB kerékpár ST 530 S, 27,5”, ezüst, kék
-        wheel_size:
-          type: number
-          format: float
-          description: A kerék mérete
-          example: 27
-        gears:
-          type: integer
-          description: A váltó sebesség fokozatainak száma
-          example: 21
-        sex:
+        website:
           type: string
-          maxLength: 10
-          description: Kiknek tervezték a kerékpárt, értéke férfi, női, vagy unisex lehet
-          example: férfi
-        type:
+        country_of_origin:
           type: string
-          maxLength: 10
-          description: A kerékpár típusa, értéke MTB, városi, országúti, vagy cross lehet
-          example: MTB
-        size:
-          type: string
-          maxLength: 10
-          nullable: true
-          description: A kerékpár mérete (opcionális)
-          example: L
-        color:
-          type: string
-          maxLength: 80
-          nullable: true
-          description: A kerékpár színe (opcionális)
-          example: ezüst, kék
-        manufacturer_id:
-          type: integer
-          description: A kerékpár gyártójának azonosítója
-          example: 1
-      required:
-        - name
-        - wheel_size
-        - gears
-        - sex
-        - type
-        - manufacturer_id
+        toothpastes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToothpasteResource'
